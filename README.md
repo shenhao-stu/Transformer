@@ -151,7 +151,7 @@ plt.xlabel("hidden dimension")
 plt.ylabel("sequence length")
 ```
 
-<img src="output_img\pos_enc.png" alt="png" style="zoom:50%;" />
+<img src="output_img/pos_enc.png" alt="png" style="zoom:50%;" />
 
 具体的流程如下图所示：
 
