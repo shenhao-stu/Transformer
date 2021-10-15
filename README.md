@@ -11,11 +11,11 @@
 - **Learner** : shenhao
 - **Date** : 2021.10.14
 
-Transformer模型在2017年被google提出，直接基于Self-Attention结构，取代了之前NLP任务中常用的RNN神经网络结构，并在WMT2014 Englishto-German和WMT2014 English-to-French两个机器翻译任务上都取得了当时的SOTA。
+Transformer 模型在 2017 年被 google 提出，直接基于 Self-Attention 结构，取代了之前 NLP 任务中常用的 RNN 神经网络结构，并在 WMT2014 Englishto-German 和 WMT2014 English-to-French 两个机器翻译任务上都取得了当时的 SOTA。
 
-与RNN这类神经网络结构相比，Transformer一个巨大的优点是：**模型在处理序列输入时，可以对整个序列输入进行并行计算，不需要按照时间步循环递归处理输入序列。**
+与 RNN 这类神经网络结构相比，Transformer 一个巨大的优点是：**模型在处理序列输入时，可以对整个序列输入进行并行计算，不需要按照时间步循环递归处理输入序列。**
 
-下图先便是Transformer整体结构图，Transformer模型结构中的左半部分为**编码器（encoder）**，右半部分为**解码器（decoder）**，下面我们来一步步拆解 Transformer。
+下图先便是 Transformer 整体结构图，Transformer 模型结构中的左半部分为**编码器（encoder）**，右半部分为**解码器（decoder）**，下面我们来一步步拆解 Transformer。
 
 <img src="output_img/0-1-transformer-arc.png" alt="png" style="zoom:50%;" />
 
@@ -29,7 +29,6 @@ from torch import nn
 import torch.nn.functional as F
 ```
 
-
 ```python
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print('Using {} device'.format(device))
@@ -37,18 +36,17 @@ print('Using {} device'.format(device))
 
     Using cpu device
 
-
 ## Embeddings
-和常见的NLP 任务一样，我们首先会使用词嵌入算法（embedding algorithm），将输入文本序列的每个词转换为一个词向量。实际应用中的向量一般是 256 或者 512 维。但为了简化起见，我们这里使用4维的词向量来进行讲解。
 
-如下图所示，假设我们的输入文本是序列包含了3个词，那么每个词可以通过词嵌入算法得到一个4维向量，于是整个输入被转化成为一个向量序列。在实际应用中，我们通常会同时给模型输入多个句子，如果每个句子的长度不一样，我们会选择一个合适的长度，作为输入文本序列的最大长度：如果一个句子达不到这个长度，那么就填充先填充一个特殊的“padding”词；如果句子超出这个长度，则做截断。最大序列长度是一个超参数，通常希望越大越好，但是更长的序列往往会占用更大的训练显存/内存，因此需要在模型训练时候视情况进行决定。
+和常见的 NLP 任务一样，我们首先会使用词嵌入算法（embedding algorithm），将输入文本序列的每个词转换为一个词向量。实际应用中的向量一般是 256 或者 512 维。但为了简化起见，我们这里使用 4 维的词向量来进行讲解。
+
+如下图所示，假设我们的输入文本是序列包含了 3 个词，那么每个词可以通过词嵌入算法得到一个 4 维向量，于是整个输入被转化成为一个向量序列。在实际应用中，我们通常会同时给模型输入多个句子，如果每个句子的长度不一样，我们会选择一个合适的长度，作为输入文本序列的最大长度：如果一个句子达不到这个长度，那么就填充先填充一个特殊的“padding”词；如果句子超出这个长度，则做截断。最大序列长度是一个超参数，通常希望越大越好，但是更长的序列往往会占用更大的训练显存/内存，因此需要在模型训练时候视情况进行决定。
 
 ![3个词和对应的词向量](output_img/2-x.png)
 
 > 输入序列每个单词被转换成**词向量**表示还将加上**位置向量**来得到该词的最终向量表示。
 
-与其他seq2seq模型类似，我们使用学习到的embedding将输入token和输出token转换为$d_{\text{model}}$维的向量。我们还使用普通的线性变换和softmax函数将解码器输出转换为预测的下一个token的概率 在我们的模型中，两个嵌入层之间和pre-softmax线性变换共享相同的权重矩阵，类似于[(cite)](https://arxiv.org/abs/1608.05859)。在embedding层中，我们将这些权重乘以$\sqrt{d_{\text{model}}}$。  
-
+与其他 seq2seq 模型类似，我们使用学习到的 embedding 将输入 token 和输出 token 转换为$d_{\text{model}}$维的向量。我们还使用普通的线性变换和 softmax 函数将解码器输出转换为预测的下一个 token 的概率 在我们的模型中，两个嵌入层之间和 pre-softmax 线性变换共享相同的权重矩阵，类似于[(cite)](https://arxiv.org/abs/1608.05859)。在 embedding 层中，我们将这些权重乘以$\sqrt{d_{\text{model}}}$。
 
 ```python
 class Embeddings(nn.Module):
@@ -74,7 +72,7 @@ class Embeddings(nn.Module):
         return embedds * math.sqrt(self.d_model)
 ```
 
-### 有关Embeddings函数的测试
+### 有关 Embeddings 函数的测试
 
 ```python
 # embedding_size=16, input_vocab_size=10
@@ -92,31 +90,28 @@ input_X = torch.randint(0, 10, (1, 5))
 input_X, input_X.shape
 ```
 
-
     (tensor([[4, 6, 5, 1, 2]]), torch.Size([1, 5]))
-
 
 ```python
 embeds_x = embedding_fc(input_X)
 embeds_x.shape
 ```
 
-
     torch.Size([1, 5, 16])
 
 ## Positional Encodding
-Positional Encodding位置编码的作用是为模型提供当前时间步的前后出现顺序的信息.因为Transformer不像RNN那样的循环结构有前后不同时间步输入间天然的先后顺序,所有的时间步是同时输入,并行推理的,因此在时间步的特征中融合进位置编码的信息是合理的.
+
+Positional Encodding 位置编码的作用是为模型提供当前时间步的前后出现顺序的信息.因为 Transformer 不像 RNN 那样的循环结构有前后不同时间步输入间天然的先后顺序,所有的时间步是同时输入,并行推理的,因此在时间步的特征中融合进位置编码的信息是合理的.
 
 位置编码可以有很多选择,可以是固定的,也可以设置成可学习的参数.
 
-这里,我们使用固定的位置编码.具体地,使用不同频率的sin和cos函数来进行位置编码,如下所示:
+这里,我们使用固定的位置编码.具体地,使用不同频率的 sin 和 cos 函数来进行位置编码,如下所示:
 $$PE_{pos,2i}=sin(pos/10000^{2i/d_{model}})$$  
-$$PE_{pos,2i+1}=cos(pos/10000^{2i/d_{model}})$$  
+$$PE_{pos,2i+1}=cos(pos/10000^{2i/d_{model}})$$
 
-其中pos代表时间步的下标索引,向量$PE_{pos}$也就是第pos个时间步的位置编码,编码长度同Embedding层.
+其中 pos 代表时间步的下标索引,向量$PE_{pos}$也就是第 pos 个时间步的位置编码,编码长度同 Embedding 层.
 
 ![png](output_img/2-position2.png)
-
 
 ```python
 class PositionalEncoding(nn.Module):
@@ -149,32 +144,29 @@ class PositionalEncoding(nn.Module):
         return self.dropout(x)
 ```
 
-
 ```python
 # embedding_size=15,dropout=0.1
 position_encoding_layer = PositionalEncoding(16, 0.1)
 ```
-
 
 ```python
 position_enc_x = position_encoding_layer(embeds_x)
 position_enc_x.shape
 ```
 
-
     torch.Size([1, 5, 16])
 
 ## 掩码及其作用
-**掩码：**掩代表遮掩，码就是我们张量中的数值，它的尺寸不定，里面一般只有0和1；代表位置被遮掩或者不被遮掩。
 
-掩码的作用：在transformer中，掩码主要的作用有两个，一个是屏蔽掉无效的padding区域，一个是屏蔽掉来自“未来”的信息。Encoder中的掩码主要是起到第一个作用，Decoder中的掩码则同时发挥着两种作用。
+**掩码：** 掩代表遮掩，码就是我们张量中的数值，它的尺寸不定，里面一般只有 0 和 1；代表位置被遮掩或者不被遮掩。
 
-屏蔽掉无效的padding区域：我们训练需要组batch进行，就以机器翻译任务为例，一个batch中不同样本的输入长度很可能是不一样的，此时我们要设置一个最大句子长度，然后对空白区域进行padding填充，而填充的区域无论在Encoder还是Decoder的计算中都是没有意义的，因此需要用mask进行标识，屏蔽掉对应区域的响应。
+掩码的作用：在 transformer 中，掩码主要的作用有两个，一个是屏蔽掉无效的 padding 区域，一个是屏蔽掉来自“未来”的信息。Encoder 中的掩码主要是起到第一个作用，Decoder 中的掩码则同时发挥着两种作用。
 
-屏蔽掉来自未来的信息：我们已经学习了attention的计算流程，它是会综合所有时间步的计算的，那么在解码的时候，就有可能获取到未来的信息，这是不行的。因此，这种情况也需要我们使用mask进行屏蔽。现在还没介绍到Decoder，如果没完全理解，可以之后再回过头来思考下。
+屏蔽掉无效的 padding 区域：我们训练需要组 batch 进行，就以机器翻译任务为例，一个 batch 中不同样本的输入长度很可能是不一样的，此时我们要设置一个最大句子长度，然后对空白区域进行 padding 填充，而填充的区域无论在 Encoder 还是 Decoder 的计算中都是没有意义的，因此需要用 mask 进行标识，屏蔽掉对应区域的响应。
 
-mask的构造代码如下：
+屏蔽掉来自未来的信息：我们已经学习了 attention 的计算流程，它是会综合所有时间步的计算的，那么在解码的时候，就有可能获取到未来的信息，这是不行的。因此，这种情况也需要我们使用 mask 进行屏蔽。现在还没介绍到 Decoder，如果没完全理解，可以之后再回过头来思考下。
 
+mask 的构造代码如下：
 
 ```python
 def subsequent_mask(size):
@@ -190,7 +182,6 @@ def subsequent_mask(size):
     # 如果是1，subsequect_mask中的该位置由1变成0
     return torch.from_numpy(subsequent_mask) == 0
 ```
-
 
 ```python
 attn_shape = (1, 10, 10)
@@ -218,7 +209,6 @@ subseq_mask = np.triu(np.ones(attn_shape), k=1).astype('uint8')
 subseq_mask
 ```
 
-
     array([[[0, 1, 1, 1, 1, 1, 1, 1, 1, 1],
             [0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
             [0, 0, 0, 1, 1, 1, 1, 1, 1, 1],
@@ -230,11 +220,9 @@ subseq_mask
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]], dtype=uint8)
 
-
 ```python
 torch.from_numpy(subseq_mask) == 0
 ```
-
 
     tensor([[[ True, False, False, False, False, False, False, False, False, False],
              [ True,  True, False, False, False, False, False, False, False, False],
@@ -247,24 +235,20 @@ torch.from_numpy(subseq_mask) == 0
              [ True,  True,  True,  True,  True,  True,  True,  True,  True, False],
              [ True,  True,  True,  True,  True,  True,  True,  True,  True,  True]]])
 
-
 ```python
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
 plt.figure(figsize=(5,5))
 plt.imshow(subsequent_mask(20)[0])
 ```
 
-
-
 ![png](output_img/output_16_1.png)
-​    
-
+​
 
 ## 规范化层
+
 规范化层的作用：它是所有深层网络模型都需要的标准网络层，因为随着网络层数的增加，通过多层的计算后输出可能开始出现过大或过小的情况，这样可能会导致学习过程出现异常，模型可能收敛非常慢。因此都会在一定层后接规范化层进行数值的规范化，使其特征数值在合理范围内。
 
-Transformer中使用的normalization手段是layer norm，实现代码很简单，如下：
-
+Transformer 中使用的 normalization 手段是 layer norm，实现代码很简单，如下：
 
 ```python
 class LayerNorm(nn.Module):
@@ -287,14 +271,12 @@ class LayerNorm(nn.Module):
         return self.a_2 * (x - mean) / (std + self.eps) + self.b_2
 ```
 
-
 ```python
 # embedding_size=16
 layer_norm = LayerNorm(16)
 norm_x = layer_norm(position_enc_x)
 position_enc_x, norm_x
 ```
-
 
     (tensor([[[-0.0000e+00, -3.6160e+00, -3.0979e-01, -0.0000e+00, -6.0106e+00,
                -7.8812e+00,  1.1963e+01,  3.3401e-01, -5.2540e+00, -3.0309e+00,
@@ -338,9 +320,9 @@ position_enc_x, norm_x
                 5.9370e-01]]], grad_fn=<AddBackward0>))
 
 ## Attention
-Attention功能可以描述为将query和一组key-value映射到输出，其中query、key、value和输出都是向量。输出为value的加权和，其中每个value的权重通过query与相应key的计算得到。                                                                         
-我们将particular attention称之为“缩放的点积Attention”(Scaled Dot-Product Attention")。其输入为query、key(维度是$d_k$)以及values(维度是$d_v$)。我们计算query和所有key的点积，然后对每个除以 $\sqrt{d_k}$, 最后用softmax函数获得value的权重。         
 
+Attention 功能可以描述为将 query 和一组 key-value 映射到输出，其中 query、key、value 和输出都是向量。输出为 value 的加权和，其中每个 value 的权重通过 query 与相应 key 的计算得到。  
+我们将 particular attention 称之为“缩放的点积 Attention”(Scaled Dot-Product Attention")。其输入为 query、key(维度是$d_k$)以及 values(维度是$d_v$)。我们计算 query 和所有 key 的点积，然后对每个除以 $\sqrt{d_k}$, 最后用 softmax 函数获得 value 的权重。
 
 ```python
 def attention(query, key, value, mask=None, dropout=None):
@@ -368,14 +350,11 @@ def attention(query, key, value, mask=None, dropout=None):
     return torch.matmul(p_attn, value), p_attn
 ```
 
-
 ```python
 position_enc_x.shape
 ```
 
-
     torch.Size([1, 5, 16])
-
 
 ```python
 # query的最后一维的大小为embedding_size,理论上q,k,v通过input_x线性转换后得来的.
@@ -391,48 +370,46 @@ output_x[0].shape,output_x[1].shape
 # 其中a(i,j)表示第i个单词对第j个单词的注意力程度.
 ```
 
-
     (torch.Size([1, 5, 16]), torch.Size([1, 5, 5]))
 
 ## 多头注意力机制
 
-Transformer 的论文通过增加多头注意力机制（一组注意力称为一个 attention head），进一步完善了Self-Attention。这种机制从如下两个方面增强了attention层的能力：
+Transformer 的论文通过增加多头注意力机制（一组注意力称为一个 attention head），进一步完善了 Self-Attention。这种机制从如下两个方面增强了 attention 层的能力：
 
-- **它扩展了模型关注不同位置的能力**。在上面的例子中，第一个位置的输出 $z_1$ 包含了句子中其他每个位置的很小一部分信息，但$z_1$​仅仅是单个向量，所以可能仅由第1个位置的信息主导了。而当我们翻译句子：`The animal didn’t cross the street because it was too tired`时，我们不仅希望模型关注到"it"本身，还希望模型关注到"The"和"animal"，甚至关注到"tired"。这时，多头注意力机制会有帮助。
-- **多头注意力机制赋予attention层多个“子表示空间”**。下面我们会看到，多头注意力机制会有多组 $W^Q, W^K W^V$ 的权重矩阵（在 Transformer 的论文中，使用了 8 组注意力),，因此可以将 $X$ 变换到更多种子空间进行表示。接下来我们也使用8组注意力头（attention heads））。每一组注意力的权重矩阵都是随机初始化的，但经过训练之后，每一组注意力的权重 $W^Q, W^K W^V$ 可以把输入的向量映射到一个对应的"子表示空间"。
+- **它扩展了模型关注不同位置的能力**。在上面的例子中，第一个位置的输出 $z_1$ 包含了句子中其他每个位置的很小一部分信息，但$z_1$​ 仅仅是单个向量，所以可能仅由第 1 个位置的信息主导了。而当我们翻译句子：`The animal didn’t cross the street because it was too tired`时，我们不仅希望模型关注到"it"本身，还希望模型关注到"The"和"animal"，甚至关注到"tired"。这时，多头注意力机制会有帮助。
+- **多头注意力机制赋予 attention 层多个“子表示空间”**。下面我们会看到，多头注意力机制会有多组 $W^Q, W^K W^V$ 的权重矩阵（在 Transformer 的论文中，使用了 8 组注意力),，因此可以将 $X$ 变换到更多种子空间进行表示。接下来我们也使用 8 组注意力头（attention heads））。每一组注意力的权重矩阵都是随机初始化的，但经过训练之后，每一组注意力的权重 $W^Q, W^K W^V$ 可以把输入的向量映射到一个对应的"子表示空间"。
 
 ![多头注意力机制](output_img/2-multi-head.png)
 
-在多头注意力机制中，我们为每组注意力设定单独的 $W_Q$, $W_K$, $W_V$ 参数矩阵。将输入 $X$ 和每组注意力的 $W_Q$, $W_K$, $W_V$ 相乘，得到8组 $Q$, $K$, $V$ 矩阵。
+在多头注意力机制中，我们为每组注意力设定单独的 $W_Q$, $W_K$, $W_V$ 参数矩阵。将输入 $X$ 和每组注意力的 $W_Q$, $W_K$, $W_V$ 相乘，得到 8 组 $Q$, $K$, $V$ 矩阵。
 
-接着，我们把每组 $K$, $Q$, $V$ 计算得到每组的 $Z$ 矩阵，就得到8个 $Z$ 矩阵。
+接着，我们把每组 $K$, $Q$, $V$ 计算得到每组的 $Z$ 矩阵，就得到 8 个 $Z$ 矩阵。
 
 <img src="output_img/2-8z.png" alt="png" style="zoom:33%;" />
 
-由于前馈神经网络层接收的是 1 个矩阵（其中每行的向量表示一个词），而不是 8 个矩阵，所以我们直接把8个子矩阵拼接起来得到一个大的矩阵，然后和另一个权重矩阵$W^O$相乘做一次变换，映射到前馈神经网络层所需要的维度。
+由于前馈神经网络层接收的是 1 个矩阵（其中每行的向量表示一个词），而不是 8 个矩阵，所以我们直接把 8 个子矩阵拼接起来得到一个大的矩阵，然后和另一个权重矩阵$W^O$相乘做一次变换，映射到前馈神经网络层所需要的维度。
 
 <img src="output_img/2-to1.png" alt="png" style="zoom:33%;" />
 
-### MutiHeadAttention小结：
+### MutiHeadAttention 小结：
 
-- 把8个矩阵 {$Z_0$,$Z_1$...,$Z_7$} 拼接起来
+- 把 8 个矩阵 {$Z_0$,$Z_1$...,$Z_7$} 拼接起来
 
 - 把拼接后的矩阵和$W_O$权重矩阵相乘
 
-- 得到最终的矩阵Z，这个矩阵包含了所有 attention heads（注意力头） 的信息。这个矩阵会输入到FFNN (Feed Forward Neural Network)层。
+- 得到最终的矩阵 Z，这个矩阵包含了所有 attention heads（注意力头） 的信息。这个矩阵会输入到 FFNN (Feed Forward Neural Network)层。
 
 以上就是多头注意力的全部内容。最后将所有内容放到一张图中：
 
 <img src="output_img/2-put-together.png" alt="png" style="zoom: 33%;" />
 
-学习了多头注意力机制，让我们再来看下当我们前面提到的it例子，不同的attention heads （注意力头）对应的“it”attention了哪些内容。下图中的绿色和橙色线条分别表示2组不同的attentin heads：
+学习了多头注意力机制，让我们再来看下当我们前面提到的 it 例子，不同的 attention heads （注意力头）对应的“it”attention 了哪些内容。下图中的绿色和橙色线条分别表示 2 组不同的 attentin heads：
 
 <img src="output_img/it-attention.png" style="zoom: 50%;" />
 
 > 当我们编码单词"it"时，其中一个 attention head （橙色注意力头）最关注的是"the animal"，另外一个绿色 attention head 关注的是"tired"。因此在某种意义上，"it"在模型中的表示，融合了"animal"和"tire"的部分表达。
 
-### MultiHeadAttention代码实例
-
+### MultiHeadAttention 代码实例
 
 ```python
 class MultiheadAttention(nn.Module):
@@ -451,7 +428,7 @@ class MultiheadAttention(nn.Module):
         self.w_k = nn.Linear(hid_dim, hid_dim)
         # 定义 W_v 矩阵
         self.w_v = nn.Linear(hid_dim, hid_dim)
-        
+
         self.fc = nn.Linear(hid_dim, hid_dim)
         self.do = nn.Dropout(dropout)
         # 缩放
@@ -524,9 +501,7 @@ print(output.shape)
 
     torch.Size([64, 12, 300])
 
-
 ### 简化代码
-
 
 ```python
 # 定义一个clones函数，来更方便的将某个结构复制若干份
@@ -534,7 +509,6 @@ def clones(module, N):
     "Produce N identical layers."
     return nn.ModuleList([copy.deepcopy(module) for _ in range(N)])
 ```
-
 
 ```python
 class MultiHeadedAttention(nn.Module):
@@ -586,13 +560,13 @@ class MultiHeadedAttention(nn.Module):
         return self.linears[-1](x)
 ```
 
- ## 前馈全连接层
-除了attention子层之外，我们的编码器和解码器中的每个层都包含一个全连接的前馈网络，该网络在每个层的位置相同（都在每个encoder-layer或者decoder-layer的最后）。该前馈网络包括两个线性变换，并在两个线性变换中间有一个ReLU激活函数。
+## 前馈全连接层
 
-$$\mathrm{FFN}(x)=\max(0, xW_1 + b_1) W_2 + b_2$$                                                                        
+除了 attention 子层之外，我们的编码器和解码器中的每个层都包含一个全连接的前馈网络，该网络在每个层的位置相同（都在每个 encoder-layer 或者 decoder-layer 的最后）。该前馈网络包括两个线性变换，并在两个线性变换中间有一个 ReLU 激活函数。
 
-尽管两层都是线性变换，但它们在层与层之间使用不同的参数。另一种描述方式是两个内核大小为1的卷积。 输入和输出的维度都是 $d_{\text{model}}=512$, 内层维度是$d_{ff}=2048$。（也就是第一层输入512维,输出2048维；第二层输入2048维，输出512维）
+$$\mathrm{FFN}(x)=\max(0, xW_1 + b_1) W_2 + b_2$$
 
+尽管两层都是线性变换，但它们在层与层之间使用不同的参数。另一种描述方式是两个内核大小为 1 的卷积。 输入和输出的维度都是 $d_{\text{model}}=512$, 内层维度是$d_{ff}=2048$。（也就是第一层输入 512 维,输出 2048 维；第二层输入 2048 维，输出 512 维）
 
 ```python
 class PositionwiseFeedForward(nn.Module):
@@ -609,17 +583,17 @@ class PositionwiseFeedForward(nn.Module):
 ```
 
 ## Encoder
-编码器由N = 6个完全相同的层组成。
-编码器的每层encoder包含Self Attention 子层和FFN子层，每个子层都使用了残差连接[(cite)](https://arxiv.org/abs/1512.03385)，和层标准化（layer-normalization） [(cite)](https://arxiv.org/abs/1607.06450)。
 
-我们称呼子层为：$\mathrm{Sublayer}(x)$，每个子层的最终输出是$\mathrm{LayerNorm}(x + \mathrm{Sublayer}(x))$。 dropout [(cite)](http://jmlr.org/papers/v15/srivastava14a.html)被加在Sublayer上。
+编码器由 N = 6 个完全相同的层组成。
+编码器的每层 encoder 包含 Self Attention 子层和 FFN 子层，每个子层都使用了残差连接[(cite)](https://arxiv.org/abs/1512.03385)，和层标准化（layer-normalization） [(cite)](https://arxiv.org/abs/1607.06450)。
 
-为了便于进行残差连接，模型中的所有子层以及embedding层产生的输出的维度都为 $d_{\text{model}}=512$。
+我们称呼子层为：$\mathrm{Sublayer}(x)$，每个子层的最终输出是$\mathrm{LayerNorm}(x + \mathrm{Sublayer}(x))$。 dropout [(cite)](http://jmlr.org/papers/v15/srivastava14a.html)被加在 Sublayer 上。
+
+为了便于进行残差连接，模型中的所有子层以及 embedding 层产生的输出的维度都为 $d_{\text{model}}=512$。
 
 将 Self-Attention 层的层标准化（layer-normalization）和涉及的向量计算细节都进行可视化，如下所示：
 
 <img src="output_img/resnet_norm.png" alt="png" style="zoom: 33%;" />
-
 
 ```python
 # 定义一个clones函数，来更方便的将某个结构复制若干份
@@ -655,12 +629,11 @@ class Encoder(nn.Module):
 
 ![png](output_img/encoder.png)
 
-下面的**SublayerConnection**类用来处理单个Sublayer的输出，该输出将继续被输入下一个Sublayer：
-
+下面的**SublayerConnection**类用来处理单个 Sublayer 的输出，该输出将继续被输入下一个 Sublayer：
 
 ```python
 class SublayerConnection(nn.Module):
-    """ 
+    """
     实现子层连接结构的类
     """
 
@@ -682,10 +655,9 @@ class SublayerConnection(nn.Module):
         return x_norm
 ```
 
-注：上面的实现中，我对残差的链接方案进行了小小的调整，和原论文有所不同。把x从norm中拿出来，保证永远有一条“高速公路”，这样理论上会收敛的快一些，但我无法确保这样做一定是对的，请一定注意。
+注：上面的实现中，我对残差的链接方案进行了小小的调整，和原论文有所不同。把 x 从 norm 中拿出来，保证永远有一条“高速公路”，这样理论上会收敛的快一些，但我无法确保这样做一定是对的，请一定注意。
 
-定义好了SubLayerConnection，我们就可以实现EncoderLayer的结构了
-
+定义好了 SubLayerConnection，我们就可以实现 EncoderLayer 的结构了
 
 ```python
 class EncoderLayer(nn.Module):
@@ -708,13 +680,13 @@ class EncoderLayer(nn.Module):
 
 ## Decoder
 
-解码器也是由N = 6 个完全相同的decoder层组成。
+解码器也是由 N = 6 个完全相同的 decoder 层组成。
 
 ### 1. 解码器整体结构
+
 解码器的作用：根据编码器的结果以及上一次预测的结果，输出序列的下一个结果。
 
-整体结构上，解码器也是由N个相同层堆叠而成。构造代码如下：
-
+整体结构上，解码器也是由 N 个相同层堆叠而成。构造代码如下：
 
 ```python
 # 使用类Decoder来实现解码器
@@ -736,20 +708,21 @@ class Decoder(nn.Module):
 ```
 
 ### 2. 解码器层
+
 每个解码器层由三个子层连接结构组成
+
 - 第一个子层连接结构包括一个**多头自注意力子层**和规范化层以及一个残差连接
 - 第二个子层连接结构包括一个**多头注意力子层**和规范化层以及一个残差连接
 - 第三个子层连接结构包括一个**前馈全连接子层**和规范化层以及一个残差连接。
-<img src="output_img/decoder.png" alt="png" style="zoom:33%;" />
+  <img src="output_img/decoder.png" alt="png" style="zoom:33%;" />
 
-有一个细节需要注意，第一个子层的多头注意力和编码器中完全一致，第二个子层，它的**多头注意力模块**中，**query来自上一个子层，key 和 value 来自编码器的输出**。可以这样理解，就是第二层负责，利用解码器已经预测出的信息作为query，去编码器提取的各种特征中，查找相关信息并融合到当前特征中，来完成预测。
+有一个细节需要注意，第一个子层的多头注意力和编码器中完全一致，第二个子层，它的**多头注意力模块**中，**query 来自上一个子层，key 和 value 来自编码器的输出**。可以这样理解，就是第二层负责，利用解码器已经预测出的信息作为 query，去编码器提取的各种特征中，查找相关信息并融合到当前特征中，来完成预测。
 
 ![gif](output_img/transformer_decoding_1.gif)
 
-解码（decoding ）阶段的每一个时间步都输出一个翻译后的单词（这里的例子是英语翻译），解码器当前时间步的输出又重新作为输入Q和编码器的输出K、V共同作为下一个时间步解码器的输入。然后重复这个过程，直到输出一个结束符。如下图所示：
+解码（decoding ）阶段的每一个时间步都输出一个翻译后的单词（这里的例子是英语翻译），解码器当前时间步的输出又重新作为输入 Q 和编码器的输出 K、V 共同作为下一个时间步解码器的输入。然后重复这个过程，直到输出一个结束符。如下图所示：
 
 ![gif](output_img/2-encoder-decoder.gif)
-
 
 ```python
 # 使用DecoderLayer的类实现解码器层
@@ -781,10 +754,9 @@ class DecoderLayer(nn.Module):
 
 ## 模型输出
 
-输出部分就很简单了，每个时间步都过一个 线性层 + softmax层
+输出部分就很简单了，每个时间步都过一个 线性层 + softmax 层
 
 线性层的作用：通过对上一步的线性变化得到指定维度的输出，也就是转换维度的作用。转换后的维度对应着输出类别的个数，如果是翻译任务，那就对应的是文字字典的大小。
-
 
 ```python
 # 将线性层和softmax计算层一起实现，因为二者的共同目标是生成最后的结构
@@ -810,13 +782,12 @@ class Generator(nn.Module):
 
 <img src="D:\shenhao\Datawhale\Transformer-In-CV\output_img/transformer_2.png" alt="png" style="zoom:38%;" />
 
-
 ```python
 # Model Architecture
 # 使用EncoderDecoder类来实现编码器-解码器结构
 class EncoderDecoder(nn.Module):
     """
-    A standard Encoder-Decoder architecture. 
+    A standard Encoder-Decoder architecture.
     Base for this and many other models.
     """
 
@@ -882,7 +853,7 @@ def make_model(src_vocab, tgt_vocab, N=6, d_model=512, d_ff=2048, h=8, dropout=0
 
 ## 实战案例
 
-下面我们用一个人造的玩具级的小任务，来实战体验下Transformer的训练，加深我们的理解，并且验证我们上面所述代码是否work。
+下面我们用一个人造的玩具级的小任务，来实战体验下 Transformer 的训练，加深我们的理解，并且验证我们上面所述代码是否 work。
 
 任务描述：针对数字序列进行学习，学习的最终目标是使模型学会输出与输入的序列删除第一个字符之后的相同的序列，如输入[1,2,3,4,5]，我们尝试让模型学会输出[2,3,4,5]。
 
@@ -892,7 +863,7 @@ def make_model(src_vocab, tgt_vocab, N=6, d_model=512, d_ff=2048, h=8, dropout=0
 
 第一步：构建并生成人工数据集
 
-第二步：构建Transformer模型及相关准备工作
+第二步：构建 Transformer 模型及相关准备工作
 
 第三步：运行模型进行训练和评估
 
@@ -901,7 +872,6 @@ def make_model(src_vocab, tgt_vocab, N=6, d_model=512, d_ff=2048, h=8, dropout=0
 训练的大致流程如下：
 
 ### 批处理和掩码
-
 
 ```python
 class Batch:
@@ -932,7 +902,6 @@ class Batch:
 
 ### Training Loop
 
-
 ```python
 def run_epoch(data_iter, model, loss_compute):
     "Standard Training and Logging Function"
@@ -958,14 +927,16 @@ def run_epoch(data_iter, model, loss_compute):
 ```
 
 ### Optimizer
-我们使用Adam优化器[(cite)](https://arxiv.org/abs/1412.6980)，其中 $\beta_1=0.9$, $\beta_2=0.98$并且$\epsilon=10^{-9}$。我们根据以下公式在训练过程中改变学习率：                                         
-$$
-lrate = d_{\text{model}}^{-0.5} \cdot                                                                                                                                                                                                                                                                                                
-  \min({step\_num}^{-0.5},                                                                                                                                                                                                                                                                                                  
-    {step\_num} \cdot {warmup\_steps}^{-1.5})                                                                                                                                                                                                                                                                               
-$$
-这对应于在第一次$warmup\_steps$步中线性地增加学习速率，并且随后将其与步数的平方根成比例地减小。我们使用$warmup\_steps=4000$。                            
 
+我们使用 Adam 优化器[(cite)](https://arxiv.org/abs/1412.6980)，其中 $\beta_1=0.9$, $\beta_2=0.98$并且$\epsilon=10^{-9}$。我们根据以下公式在训练过程中改变学习率：
+
+$$
+lrate = d_{\text{model}}^{-0.5} \cdot
+  \min({step\_num}^{-0.5},
+    {step\_num} \cdot {warmup\_steps}^{-1.5})
+$$
+
+这对应于在第一次$warmup\_steps$步中线性地增加学习速率，并且随后将其与步数的平方根成比例地减小。我们使用$warmup\_steps=4000$。
 
 ```python
 class NoamOpt:
@@ -1004,7 +975,6 @@ def get_std_opt(model):
 
 > 以下是此模型针对不同模型大小和优化超参数的曲线示例。
 
-
 ```python
 # Three settings of the lrate hyperparameters.
 opts = [NoamOpt(512, 1, 4000, None),
@@ -1015,18 +985,16 @@ plt.plot(np.arange(1, 20000), [[opt.rate(i)
 plt.legend(["512:4000", "512:8000", "256:4000"])
 ```
 
-
 ![png](output_img/output_56_1.png)
-​    
-
+​
 
 ### 正则化
+
 ### 标签平滑
 
-在训练过程中，我们使用的label平滑的值为$\epsilon_{ls}=0.1$ [(cite)](https://arxiv.org/abs/1512.00567)。虽然对label进行平滑会让模型困惑，但提高了准确性和BLEU得分。
+在训练过程中，我们使用的 label 平滑的值为$\epsilon_{ls}=0.1$ [(cite)](https://arxiv.org/abs/1512.00567)。虽然对 label 进行平滑会让模型困惑，但提高了准确性和 BLEU 得分。
 
-> 我们使用KL div损失实现标签平滑。我们没有使用one-hot独热分布，而是创建了一个分布，该分布设定目标分布为1-smoothing，将剩余概率分配给词表中的其他单词。
-
+> 我们使用 KL div 损失实现标签平滑。我们没有使用 one-hot 独热分布，而是创建了一个分布，该分布设定目标分布为 1-smoothing，将剩余概率分配给词表中的其他单词。
 
 ```python
 class LabelSmoothing(nn.Module):
@@ -1056,7 +1024,6 @@ class LabelSmoothing(nn.Module):
 
 下面我们看一个例子，看看平滑后的真实概率分布。
 
-
 ```python
 # Example of label smoothing.
 crit = LabelSmoothing(5, 0, 0.4)
@@ -1077,7 +1044,7 @@ plt.imshow(crit.true_dist)
       mask = torch.nonzero(target.data == self.padding_idx)
 
 ![png](output_img/output_60_2.png)
-​    
+​
 
 ```python
 print(crit.true_dist)
@@ -1087,9 +1054,7 @@ print(crit.true_dist)
             [0.0000, 0.6000, 0.1333, 0.1333, 0.1333],
             [0.0000, 0.0000, 0.0000, 0.0000, 0.0000]])
 
-
-由于标签平滑的存在，如果模型对于某个单词特别有信心，输出特别大的概率，会被惩罚。如下代码所示，随着输入x的增大，x/d会越来越大，1/d会越来越小，但是loss并不是一直降低的。
-
+由于标签平滑的存在，如果模型对于某个单词特别有信心，输出特别大的概率，会被惩罚。如下代码所示，随着输入 x 的增大，x/d 会越来越大，1/d 会越来越小，但是 loss 并不是一直降低的。
 
 ```python
 crit = LabelSmoothing(5, 0, 0.1)
@@ -1108,14 +1073,12 @@ x = np.arange(1, 100)
 plt.plot(x, y)
 ```
 
-
 ![png](output_img/output_63_1.png)
-​    
-
+​
 
 ## 实例
-### 合成数据
 
+### 合成数据
 
 ```python
 def data_gen(V, batch, nbatches):
@@ -1129,7 +1092,6 @@ def data_gen(V, batch, nbatches):
 ```
 
 ### 损失函数计算
-
 
 ```python
 class SimpleLossCompute:
@@ -1153,7 +1115,6 @@ class SimpleLossCompute:
 
 ### 贪婪解码
 
-
 ```python
 # Train the simple copy task.
 V = 11
@@ -1164,10 +1125,10 @@ model_opt = NoamOpt(model.src_embed[0].d_model, 1, 400,
 
 for epoch in range(10):
     model.train()
-    run_epoch(data_gen(V, 30, 20), model, 
+    run_epoch(data_gen(V, 30, 20), model,
               SimpleLossCompute(model.generator, criterion, model_opt))
     model.eval()
-    print(run_epoch(data_gen(V, 30, 5), model, 
+    print(run_epoch(data_gen(V, 30, 5), model,
                     SimpleLossCompute(model.generator, criterion, None)))
 ```
 
@@ -1202,8 +1163,6 @@ for epoch in range(10):
     Epoch Step: 1 Loss: 0.455055 Tokens per Sec: 631.438232
     tensor(0.3832)
 
-
-
 ```python
 def greedy_decode(model, src, src_mask, max_len, start_symbol):
     memory = model.encode(src, src_mask)
@@ -1227,4 +1186,3 @@ print(greedy_decode(model, src, src_mask, max_len=10, start_symbol=1))
 ```
 
     tensor([[ 1,  2,  3,  4,  5,  6,  7,  8,  9, 10]])
-
