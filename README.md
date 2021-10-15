@@ -1,7 +1,25 @@
-# CV in Transformer
+<p align="center">
+  <a href="https://github.com/shenhao-stu/Transformer-In-CV">
+  	<img src="output_img/logo.png" alt="chinese-poetry" height=40% width=40%/>
+  </a>
+</p>
+
+<p align="center">Python | shenhao0223@163.sufe.edu.cn | 上海财经大学 </p>
+
+<h2 align="center">🐳🐳Transformer In CV🐳🐳</h2>
+
 - **Learner** : shenhao
 - **Date** : 2021.10.14
 
+Transformer模型在2017年被google提出，直接基于Self-Attention结构，取代了之前NLP任务中常用的RNN神经网络结构，并在WMT2014 Englishto-German和WMT2014 English-to-French两个机器翻译任务上都取得了当时的SOTA。
+
+与RNN这类神经网络结构相比，Transformer一个巨大的优点是：**模型在处理序列输入时，可以对整个序列输入进行并行计算，不需要按照时间步循环递归处理输入序列。**
+
+下图先便是Transformer整体结构图，Transformer模型结构中的左半部分为**编码器（encoder）**，右半部分为**解码器（decoder）**，下面我们来一步步拆解 Transformer。
+
+<img src="output_img/0-1-transformer-arc.png" alt="png" style="zoom:50%;" />
+
+## 导入需要的库
 
 ```python
 import math, copy, time
@@ -18,9 +36,17 @@ print('Using {} device'.format(device))
 ```
 
     Using cpu device
-    
+
 
 ## Embeddings
+和常见的NLP 任务一样，我们首先会使用词嵌入算法（embedding algorithm），将输入文本序列的每个词转换为一个词向量。实际应用中的向量一般是 256 或者 512 维。但为了简化起见，我们这里使用4维的词向量来进行讲解。
+
+如下图所示，假设我们的输入文本是序列包含了3个词，那么每个词可以通过词嵌入算法得到一个4维向量，于是整个输入被转化成为一个向量序列。在实际应用中，我们通常会同时给模型输入多个句子，如果每个句子的长度不一样，我们会选择一个合适的长度，作为输入文本序列的最大长度：如果一个句子达不到这个长度，那么就填充先填充一个特殊的“padding”词；如果句子超出这个长度，则做截断。最大序列长度是一个超参数，通常希望越大越好，但是更长的序列往往会占用更大的训练显存/内存，因此需要在模型训练时候视情况进行决定。
+
+![3个词和对应的词向量](output_img/2-x.png)
+
+> 输入序列每个单词被转换成**词向量**表示还将加上**位置向量**来得到该词的最终向量表示。
+
 与其他seq2seq模型类似，我们使用学习到的embedding将输入token和输出token转换为$d_{\text{model}}$维的向量。我们还使用普通的线性变换和softmax函数将解码器输出转换为预测的下一个token的概率 在我们的模型中，两个嵌入层之间和pre-softmax线性变换共享相同的权重矩阵，类似于[(cite)](https://arxiv.org/abs/1608.05859)。在embedding层中，我们将这些权重乘以$\sqrt{d_{\text{model}}}$。  
 
 
@@ -48,6 +74,7 @@ class Embeddings(nn.Module):
         return embedds * math.sqrt(self.d_model)
 ```
 
+### 有关Embeddings函数的测试
 
 ```python
 # embedding_size=16, input_vocab_size=10
@@ -58,8 +85,6 @@ print(embedding_fc)
     Embeddings(
       (lut): Embedding(10, 16)
     )
-    
-
 
 ```python
 # sentence or batch_size=1,words=5
@@ -68,11 +93,7 @@ input_X, input_X.shape
 ```
 
 
-
-
     (tensor([[4, 6, 5, 1, 2]]), torch.Size([1, 5]))
-
-
 
 
 ```python
@@ -81,11 +102,7 @@ embeds_x.shape
 ```
 
 
-
-
     torch.Size([1, 5, 16])
-
-
 
 ## Positional Encodding
 Positional Encodding位置编码的作用是为模型提供当前时间步的前后出现顺序的信息.因为Transformer不像RNN那样的循环结构有前后不同时间步输入间天然的先后顺序,所有的时间步是同时输入,并行推理的,因此在时间步的特征中融合进位置编码的信息是合理的.
@@ -97,6 +114,8 @@ $$PE_{pos,2i}=sin(pos/10000^{2i/d_{model}})$$
 $$PE_{pos,2i+1}=cos(pos/10000^{2i/d_{model}})$$  
 
 其中pos代表时间步的下标索引,向量$PE_{pos}$也就是第pos个时间步的位置编码,编码长度同Embedding层.
+
+![png](output_img/2-position2.png)
 
 
 ```python
@@ -143,14 +162,10 @@ position_enc_x.shape
 ```
 
 
-
-
     torch.Size([1, 5, 16])
 
-
-
 ## 掩码及其作用
-掩码：掩代表遮掩，码就是我们张量中的数值，它的尺寸不定，里面一般只有0和1；代表位置被遮掩或者不被遮掩。
+**掩码：**掩代表遮掩，码就是我们张量中的数值，它的尺寸不定，里面一般只有0和1；代表位置被遮掩或者不被遮掩。
 
 掩码的作用：在transformer中，掩码主要的作用有两个，一个是屏蔽掉无效的padding区域，一个是屏蔽掉来自“未来”的信息。Encoder中的掩码主要是起到第一个作用，Decoder中的掩码则同时发挥着两种作用。
 
@@ -204,8 +219,6 @@ subseq_mask
 ```
 
 
-
-
     array([[[0, 1, 1, 1, 1, 1, 1, 1, 1, 1],
             [0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
             [0, 0, 0, 1, 1, 1, 1, 1, 1, 1],
@@ -218,13 +231,9 @@ subseq_mask
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]], dtype=uint8)
 
 
-
-
 ```python
 torch.from_numpy(subseq_mask) == 0
 ```
-
-
 
 
     tensor([[[ True, False, False, False, False, False, False, False, False, False],
@@ -239,8 +248,6 @@ torch.from_numpy(subseq_mask) == 0
              [ True,  True,  True,  True,  True,  True,  True,  True,  True,  True]]])
 
 
-
-
 ```python
 import matplotlib.pyplot as plt 
 plt.figure(figsize=(5,5))
@@ -249,15 +256,8 @@ plt.imshow(subsequent_mask(20)[0])
 
 
 
-
-    <matplotlib.image.AxesImage at 0x205ceb0c2e0>
-
-
-
-
-    
-![png](output_16_1.png)
-    
+![png](output_img/output_16_1.png)
+​    
 
 
 ## 规范化层
@@ -294,8 +294,6 @@ layer_norm = LayerNorm(16)
 norm_x = layer_norm(position_enc_x)
 position_enc_x, norm_x
 ```
-
-
 
 
     (tensor([[[-0.0000e+00, -3.6160e+00, -3.0979e-01, -0.0000e+00, -6.0106e+00,
@@ -339,8 +337,6 @@ position_enc_x, norm_x
                -1.0618e+00,  6.5466e-03, -5.1622e-01, -7.2481e-01,  6.5466e-03,
                 5.9370e-01]]], grad_fn=<AddBackward0>))
 
-
-
 ## Attention
 Attention功能可以描述为将query和一组key-value映射到输出，其中query、key、value和输出都是向量。输出为value的加权和，其中每个value的权重通过query与相应key的计算得到。                                                                         
 我们将particular attention称之为“缩放的点积Attention”(Scaled Dot-Product Attention")。其输入为query、key(维度是$d_k$)以及values(维度是$d_v$)。我们计算query和所有key的点积，然后对每个除以 $\sqrt{d_k}$, 最后用softmax函数获得value的权重。         
@@ -378,11 +374,7 @@ position_enc_x.shape
 ```
 
 
-
-
     torch.Size([1, 5, 16])
-
-
 
 
 ```python
@@ -400,11 +392,7 @@ output_x[0].shape,output_x[1].shape
 ```
 
 
-
-
     (torch.Size([1, 5, 16]), torch.Size([1, 5, 5]))
-
-
 
 ## 多头注意力机制
 
@@ -412,6 +400,38 @@ Transformer 的论文通过增加多头注意力机制（一组注意力称为�
 
 - **它扩展了模型关注不同位置的能力**。在上面的例子中，第一个位置的输出 $z_1$ 包含了句子中其他每个位置的很小一部分信息，但$z_1$​仅仅是单个向量，所以可能仅由第1个位置的信息主导了。而当我们翻译句子：`The animal didn’t cross the street because it was too tired`时，我们不仅希望模型关注到"it"本身，还希望模型关注到"The"和"animal"，甚至关注到"tired"。这时，多头注意力机制会有帮助。
 - **多头注意力机制赋予attention层多个“子表示空间”**。下面我们会看到，多头注意力机制会有多组 $W^Q, W^K W^V$ 的权重矩阵（在 Transformer 的论文中，使用了 8 组注意力),，因此可以将 $X$ 变换到更多种子空间进行表示。接下来我们也使用8组注意力头（attention heads））。每一组注意力的权重矩阵都是随机初始化的，但经过训练之后，每一组注意力的权重 $W^Q, W^K W^V$ 可以把输入的向量映射到一个对应的"子表示空间"。
+
+![多头注意力机制](output_img/2-multi-head.png)
+
+在多头注意力机制中，我们为每组注意力设定单独的 $W_Q$, $W_K$, $W_V$ 参数矩阵。将输入 $X$ 和每组注意力的 $W_Q$, $W_K$, $W_V$ 相乘，得到8组 $Q$, $K$, $V$ 矩阵。
+
+接着，我们把每组 $K$, $Q$, $V$ 计算得到每组的 $Z$ 矩阵，就得到8个 $Z$ 矩阵。
+
+<img src="output_img/2-8z.png" alt="png" style="zoom:33%;" />
+
+由于前馈神经网络层接收的是 1 个矩阵（其中每行的向量表示一个词），而不是 8 个矩阵，所以我们直接把8个子矩阵拼接起来得到一个大的矩阵，然后和另一个权重矩阵$W^O$相乘做一次变换，映射到前馈神经网络层所需要的维度。
+
+<img src="output_img/2-to1.png" alt="png" style="zoom:33%;" />
+
+### MutiHeadAttention小结：
+
+- 把8个矩阵 {$Z_0$,$Z_1$...,$Z_7$} 拼接起来
+
+- 把拼接后的矩阵和$W_O$权重矩阵相乘
+
+- 得到最终的矩阵Z，这个矩阵包含了所有 attention heads（注意力头） 的信息。这个矩阵会输入到FFNN (Feed Forward Neural Network)层。
+
+以上就是多头注意力的全部内容。最后将所有内容放到一张图中：
+
+<img src="output_img/2-put-together.png" alt="png" style="zoom: 33%;" />
+
+学习了多头注意力机制，让我们再来看下当我们前面提到的it例子，不同的attention heads （注意力头）对应的“it”attention了哪些内容。下图中的绿色和橙色线条分别表示2组不同的attentin heads：
+
+<img src="output_img/it-attention.png" style="zoom: 50%;" />
+
+> 当我们编码单词"it"时，其中一个 attention head （橙色注意力头）最关注的是"the animal"，另外一个绿色 attention head 关注的是"tired"。因此在某种意义上，"it"在模型中的表示，融合了"animal"和"tire"的部分表达。
+
+### MultiHeadAttention代码实例
 
 
 ```python
@@ -503,7 +523,7 @@ print(output.shape)
 ```
 
     torch.Size([64, 12, 300])
-    
+
 
 ### 简化代码
 
@@ -596,6 +616,10 @@ class PositionwiseFeedForward(nn.Module):
 
 为了便于进行残差连接，模型中的所有子层以及embedding层产生的输出的维度都为 $d_{\text{model}}=512$。
 
+将 Self-Attention 层的层标准化（layer-normalization）和涉及的向量计算细节都进行可视化，如下所示：
+
+<img src="output_img/resnet_norm.png" alt="png" style="zoom: 33%;" />
+
 
 ```python
 # 定义一个clones函数，来更方便的将某个结构复制若干份
@@ -629,7 +653,7 @@ class Encoder(nn.Module):
 
 可以看到，两个子层的结构其实是一致的，只是中间核心层的实现不同.
 
-![image-20211014164210704](https://gitee.com/shenhao-stu/picgo/raw/master/Others/image-20211014164210704.png)
+![png](output_img/encoder.png)
 
 下面的**SublayerConnection**类用来处理单个Sublayer的输出，该输出将继续被输入下一个Sublayer：
 
@@ -716,9 +740,15 @@ class Decoder(nn.Module):
 - 第一个子层连接结构包括一个**多头自注意力子层**和规范化层以及一个残差连接
 - 第二个子层连接结构包括一个**多头注意力子层**和规范化层以及一个残差连接
 - 第三个子层连接结构包括一个**前馈全连接子层**和规范化层以及一个残差连接。
-![image-20211014165218933](https://gitee.com/shenhao-stu/picgo/raw/master/Others/image-20211014165218933.png)
+<img src="output_img/decoder.png" alt="png" style="zoom:33%;" />
 
 有一个细节需要注意，第一个子层的多头注意力和编码器中完全一致，第二个子层，它的**多头注意力模块**中，**query来自上一个子层，key 和 value 来自编码器的输出**。可以这样理解，就是第二层负责，利用解码器已经预测出的信息作为query，去编码器提取的各种特征中，查找相关信息并融合到当前特征中，来完成预测。
+
+![gif](output_img/transformer_decoding_1.gif)
+
+解码（decoding ）阶段的每一个时间步都输出一个翻译后的单词（这里的例子是英语翻译），解码器当前时间步的输出又重新作为输入Q和编码器的输出K、V共同作为下一个时间步解码器的输入。然后重复这个过程，直到输出一个结束符。如下图所示：
+
+![gif](output_img/2-encoder-decoder.gif)
 
 
 ```python
@@ -775,6 +805,10 @@ class Generator(nn.Module):
 ```
 
 ## 模型构建
+
+编码器和和解码器的子层里面都有层标准化（layer-normalization）。假设一个 Transformer 是由 2 层编码器和两层解码器组成的，将全部内部细节展示起来如下图所示。
+
+<img src="D:\shenhao\Datawhale\Transformer-In-CV\output_img/transformer_2.png" alt="png" style="zoom:38%;" />
 
 
 ```python
@@ -982,16 +1016,8 @@ plt.legend(["512:4000", "512:8000", "256:4000"])
 ```
 
 
-
-
-    <matplotlib.legend.Legend at 0x205cec22ee0>
-
-
-
-
-    
-![png](output_56_1.png)
-    
+![png](output_img/output_56_1.png)
+​    
 
 
 ### 正则化
@@ -1049,21 +1075,9 @@ plt.imshow(crit.true_dist)
     Consider using one of the following signatures instead:
     	nonzero(Tensor input, *, bool as_tuple) (Triggered internally at  ..\torch\csrc\utils\python_arg_parser.cpp:766.)
       mask = torch.nonzero(target.data == self.padding_idx)
-    
 
-
-
-
-    <matplotlib.image.AxesImage at 0x205cfce9130>
-
-
-
-
-    
-![png](output_60_2.png)
-    
-
-
+![png](output_img/output_60_2.png)
+​    
 
 ```python
 print(crit.true_dist)
@@ -1072,7 +1086,7 @@ print(crit.true_dist)
     tensor([[0.0000, 0.1333, 0.6000, 0.1333, 0.1333],
             [0.0000, 0.6000, 0.1333, 0.1333, 0.1333],
             [0.0000, 0.0000, 0.0000, 0.0000, 0.0000]])
-    
+
 
 由于标签平滑的存在，如果模型对于某个单词特别有信心，输出特别大的概率，会被惩罚。如下代码所示，随着输入x的增大，x/d会越来越大，1/d会越来越小，但是loss并不是一直降低的。
 
@@ -1095,16 +1109,8 @@ plt.plot(x, y)
 ```
 
 
-
-
-    [<matplotlib.lines.Line2D at 0x205cfd34b50>]
-
-
-
-
-    
-![png](output_63_1.png)
-    
+![png](output_img/output_63_1.png)
+​    
 
 
 ## 实例
@@ -1195,7 +1201,7 @@ for epoch in range(10):
     Epoch Step: 1 Loss: 0.470235 Tokens per Sec: 419.160828
     Epoch Step: 1 Loss: 0.455055 Tokens per Sec: 631.438232
     tensor(0.3832)
-    
+
 
 
 ```python
@@ -1221,4 +1227,4 @@ print(greedy_decode(model, src, src_mask, max_len=10, start_symbol=1))
 ```
 
     tensor([[ 1,  2,  3,  4,  5,  6,  7,  8,  9, 10]])
-    
+
