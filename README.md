@@ -1,3 +1,5 @@
+#! https://zhuanlan.zhihu.com/p/421792538
+
 <p align="center">
   <a href="https://github.com/shenhao-stu/Transformer-In-CV">
   	<img src="output_img/logo.png" alt="chinese-poetry" height=40% width=40%/>
@@ -115,9 +117,8 @@ $$PE_{pos,2i+1}=cos(pos/10000^{2i/d_{model}})$$
 
 ![fc](output_img/fc.png)
 
-
-
 **我们可以用代码简单看一下效果**
+
 ```python
 # 导入依赖库
 import numpy as np
@@ -1079,12 +1080,6 @@ v = crit(predict.log(),
 # Show the target distributions expected by the system.
 plt.imshow(crit.true_dist)
 ```
-
-    C:\Users\56550\AppData\Local\Temp/ipykernel_7752/410927135.py:19: UserWarning: This overload of nonzero is deprecated:
-    	nonzero(Tensor input, *, Tensor out)
-    Consider using one of the following signatures instead:
-    	nonzero(Tensor input, *, bool as_tuple) (Triggered internally at  ..\torch\csrc\utils\python_arg_parser.cpp:766.)
-      mask = torch.nonzero(target.data == self.padding_idx)
 
 ![png](output_img/output_60_2.png)
 ​
