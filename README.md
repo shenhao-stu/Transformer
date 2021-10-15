@@ -111,6 +111,49 @@ $$PE_{pos,2i+1}=cos(pos/10000^{2i/d_{model}})$$
 
 其中 pos 代表时间步的下标索引,向量$PE_{pos}$也就是第 pos 个时间步的位置编码,编码长度同 Embedding 层.
 
+下图为$pos=1$，$d_{model}=128$的 $sin$ 和 $cos$ 的函数图像，可以看到当 $x$ 增大的时候，cos->1,sin->0。维度上随着维度序号增大，周期变化会越来越慢，而产生一种包含位置信息的纹理。
+
+![fc](output_img/fc.png)
+
+
+
+**我们可以用代码简单看一下效果**
+```python
+# 导入依赖库
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import math
+
+
+def get_positional_encoding(max_seq_len, embed_dim):
+    # 初始化一个positional encoding
+    # embed_dim: 字嵌入的维度
+    # max_seq_len: 最大的序列长度
+    positional_encoding = np.array([
+        [pos / np.power(10000, 2 * i / embed_dim) for i in range(embed_dim)]
+        if pos != 0 else np.zeros(embed_dim) for pos in range(max_seq_len)])
+    positional_encoding[1:, 0::2] = np.sin(
+        positional_encoding[1:, 0::2])  # dim 2i 偶数
+    positional_encoding[1:, 1::2] = np.cos(
+        positional_encoding[1:, 1::2])  # dim 2i+1 奇数
+    # 归一化, 用位置嵌入的每一行除以它的模长
+    # denominator = np.sqrt(np.sum(position_enc**2, axis=1, keepdims=True))
+    # position_enc = position_enc / (denominator + 1e-8)
+    return positional_encoding
+
+positional_encoding = get_positional_encoding(max_seq_len=100, embed_dim=16)
+plt.figure(figsize=(10, 10))
+sns.heatmap(positional_encoding)
+plt.title("Sinusoidal Function")
+plt.xlabel("hidden dimension")
+plt.ylabel("sequence length")
+```
+
+<img src="output_img\pos_enc.png" alt="png" style="zoom:50%;" />
+
+具体的流程如下图所示：
+
 ![png](output_img/2-position2.png)
 
 ```python
