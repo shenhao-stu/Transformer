@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="https://github.com/shenhao-stu/Transformer-In-CV">
-  	<img src="output_img/logo.png" alt="chinese-poetry" height=40% width=40%/>
+  	<img src="output_img/logo.png" alt="Transformer—In-CV" height=40% width=40%/>
   </a>
 </p>
 
@@ -824,7 +824,7 @@ class Generator(nn.Module):
 
 编码器和和解码器的子层里面都有层标准化（layer-normalization）。假设一个 Transformer 是由 2 层编码器和两层解码器组成的，将全部内部细节展示起来如下图所示。
 
-<img src="D:\shenhao\Datawhale\Transformer-In-CV\output_img/transformer_2.png" alt="png" style="zoom:38%;" />
+<img src="output_img/transformer_2.png" alt="png" style="zoom:38%;" />
 
 ```python
 # Model Architecture
@@ -1036,6 +1036,10 @@ plt.legend(["512:4000", "512:8000", "256:4000"])
 
 ### 标签平滑
 
+$$
+q_{i}= \begin{cases}1-\varepsilon & \text { if } i=y \\ \varepsilon /(K-1) & \text { otherwise }\end{cases}
+$$
+
 在训练过程中，我们使用的 label 平滑的值为$\epsilon_{ls}=0.1$ [(cite)](https://arxiv.org/abs/1512.00567)。虽然对 label 进行平滑会让模型困惑，但提高了准确性和 BLEU 得分。
 
 > 我们使用 KL div 损失实现标签平滑。我们没有使用 one-hot 独热分布，而是创建了一个分布，该分布设定目标分布为 1-smoothing，将剩余概率分配给词表中的其他单词。
@@ -1056,8 +1060,8 @@ class LabelSmoothing(nn.Module):
     def forward(self, x, target):
         assert x.size(1) == self.size
         true_dist = x.data.clone()
-        true_dist.fill_(self.smoothing / (self.size - 2))
-        true_dist.scatter_(1, target.data.unsqueeze(1), self.confidence)
+        true_dist.fill_(self.smoothing / (self.size - 2)) # if i!=y, smoothing/(size-2)
+        true_dist.scatter_(1, target.data.unsqueeze(1), self.confidence) # if i=y, 1-smoothing
         true_dist[:, self.padding_idx] = 0
         mask = torch.nonzero(target.data == self.padding_idx)
         if mask.dim() > 0:
@@ -1113,6 +1117,28 @@ plt.plot(x, y)
 
 ![png](output_img/output_63_1.png)
 ​
+
+#### 思考：
+
+1. 为什么使用KLDivLoss衡量两个分布的差异？
+
+首先KLDivLoss，KL散度用于连续分布的距离度量；并且对离散采用的连续输出空间分布进行回归通常很有用。
+
+$l(x,y)=L=\{l_1,...,l_N\},l_n=y_n(logy_n-x_n)$
+
+> 注意:如果$y_i$为0,$l_i$也为0。可以理解为不影响loss。
+
+2. 为什么是$size-2$而不是$size-1$？
+
+因为在vocabulary中 index=0 是 0填充符号pad ，专门为了填充长度没有达到max_len的句子。而由于end of sentence符号的存在，0填充符号的预测和计算损失是没有意义。
+
+如果让其true_dist的每一个token（即true_dist[i]）对应的第0个索引（index=0）的值为0即能实现这一目的；而token预测概率的第0个索引代表的就是填充符号的概率。因此我们希望true_dist[i]中第0个索引的值始终为0，这样由于$l_0$始终为0，pad不参与loss计算，所以true_dist[:,0]=0。
+
+所以$size-1$再$-1$。相当于只有 $size-1$ 个概率需要被平滑，而 $i=y$ 是用 $1-smoothing$ 填充，$i \neq y$ 用 $smoothing/(size-2)$
+
+3. mask的作用：就是将target中所有预测为0的token的位置提取出，将true_dist对应位置全部填充0，以此不影响loss。
+
+比如target=[25,21,0]，那么true_dist[2]全为0，[0,....,0]
 
 ## 实例
 
