@@ -1,5 +1,3 @@
-#! https://zhuanlan.zhihu.com/p/421792538
-
 <p align="center">
   <a href="https://github.com/shenhao-stu/Transformer-In-CV">
   	<img src="output_img/logo.png" alt="Transformer—In-CV" height=40% width=40%/>
@@ -12,6 +10,7 @@
 
 - **Learner** : shenhao
 - **Date** : 2021.10.14
+- **Contact** : [知乎](https://zhuanlan.zhihu.com/p/421792538)
 
 Transformer 模型在 2017 年被 google 提出，直接基于 Self-Attention 结构，取代了之前 NLP 任务中常用的 RNN 神经网络结构，并在 WMT2014 Englishto-German 和 WMT2014 English-to-French 两个机器翻译任务上都取得了当时的 SOTA。
 
