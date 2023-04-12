@@ -117,7 +117,7 @@ def attention(query, key, value, mask=None, dropout=None):
 
     # 接着判断是否使用掩码张量
     if mask is not None:
-        # 使用tensor的masked_fill方法，将掩码张量和scores张量每个位置一一比较，如果掩码张量则对应的scores张量用-1e9这个置来替换
+        # 使用tensor的masked_fill方法，将掩码张量和scores张量每个位置一一比较，如果掩码张量==0则对应的scores张量用-1e9这个置来替换
         scores = scores.masked_fill(mask == 0, -1e9)
 
     # 对scores的最后一维进行softmax操作，使用F.softmax方法，这样获得最终的注意力张量
@@ -484,17 +484,17 @@ def make_model(src_vocab, tgt_vocab, N=6, d_model=512, d_ff=2048, h=8, dropout=0
 class Batch:
     "Object for holding a batch of data with mask during training."
 
-    def __init__(self, src, trg=None, pad=0):
-        # src,trg [30,10]
+    def __init__(self, src, tgt=None, pad=0):
+        # src,tgt [30,10]
         self.src = src
         # src_mask.shape=[30,1,10]
         self.src_mask = (src != pad).unsqueeze(-2)
-        if trg is not None:
-            self.trg = trg[:, :-1]  # [30,9]
-            self.trg_y = trg[:, 1:]  # [30,9]
-            self.trg_mask = \
-                self.make_std_mask(self.trg, pad)
-            self.ntokens = (self.trg_y != pad).data.sum()
+        if tgt is not None:
+            self.tgt = tgt[:, :-1]  # [30,9]
+            self.tgt_y = tgt[:, 1:]  # [30,9]
+            self.tgt_mask = \
+                self.make_std_mask(self.tgt, pad)
+            self.ntokens = (self.tgt_y != pad).data.sum()
 
     @staticmethod
     def make_std_mask(tgt, pad):
@@ -513,11 +513,11 @@ def run_epoch(data_iter, model, loss_compute):
     total_tokens = 0
     total_loss = 0
     tokens = 0
-    # batch.src.shape=[30,10] batch.trg.shape=[30,9]
+    # batch.src.shape=[30,10] batch.tgt.shape=[30,9]
     for i, batch in enumerate(data_iter):
-        out = model.forward(batch.src, batch.trg,
-                            batch.src_mask, batch.trg_mask)
-        loss = loss_compute(out, batch.trg_y, batch.ntokens)
+        out = model.forward(batch.src, batch.tgt,
+                            batch.src_mask, batch.tgt_mask)
+        loss = loss_compute(out, batch.tgt_y, batch.ntokens)
         total_loss += loss
         total_tokens += batch.ntokens
         tokens += batch.ntokens
